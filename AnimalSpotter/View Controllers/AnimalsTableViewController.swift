@@ -23,7 +23,6 @@ class AnimalsTableViewController: UITableViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        // transition to login view if conditions require
     }
 
     // MARK: - Table view data source
