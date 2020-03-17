@@ -11,7 +11,7 @@ import UIKit
 class AnimalsTableViewController: UITableViewController {
     
     // MARK: - Properties
-    
+    private let apiController = APIController()
     private var animalNames: [String] = []
 
     // MARK: - View Lifecycle
@@ -23,6 +23,9 @@ class AnimalsTableViewController: UITableViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        if apiController.bearer == nil {
+            performSegue(withIdentifier: "LoginViewModalSegue", sender: self)
+        }
     }
 
     // MARK: - Table view data source
@@ -50,8 +53,9 @@ class AnimalsTableViewController: UITableViewController {
 
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == "LoginViewModalSegue" {
-            // inject dependencies
+        if segue.identifier == "LoginViewModalSegue",
+            let loginVC = segue.destination as? LoginViewController {
+            loginVC.apiController = apiController
         }
     }
 }
