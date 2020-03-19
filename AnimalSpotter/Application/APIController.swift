@@ -14,6 +14,14 @@ enum HTTPMethod: String {
     case post = "POST"
 }
 
+enum NetworkError: Error {
+    case noAuth
+    case badAuth
+    case otherError(Error)
+    case noData
+    case decodeFailure
+}
+
 class APIController {
     //MARK: - Public Properties
     var bearer: Bearer?
@@ -50,7 +58,6 @@ class APIController {
                 completion(NSError(domain: "", code: response.statusCode, userInfo: nil))
                 return
             }
-            
             completion(nil)
         }.resume()
     }
@@ -98,12 +105,109 @@ class APIController {
                 completion(NSError())
                 return
             }
-            
             completion(nil)
         }.resume()
     }
     
     // create function for fetching all animal names
     
+    func fetchAllAnimalNames(completion: @escaping (Result<[String], NetworkError>) -> Void) {
+        guard let bearer = bearer else {
+            completion(.failure(.noAuth))
+            return
+        }
+        
+        let allAnimalsURL = baseUrl.appendingPathComponent("animals/all")
+        
+        var request = URLRequest(url: allAnimalsURL)
+        request.httpMethod = HTTPMethod.get.rawValue
+        request.addValue("Bearer \(bearer.token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+            if let response = response as? HTTPURLResponse,
+                response.statusCode == 401 {
+                completion(.failure(.badAuth))
+                return
+            }
+            
+            guard error == nil else {
+                completion(.failure(.otherError(error!)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(.noData))
+                return
+            }
+            
+            let jsonDecoder = JSONDecoder()
+            do {
+                let animalNames = try jsonDecoder.decode([String].self, from: data)
+                completion(.success(animalNames))
+            } catch {
+                completion(.failure(.decodeFailure))
+            }
+        }.resume()
+    }
+    
     // create function to fetch image
+    func fetchDetails(for animalName: String, completion: @escaping (Result<Animal, NetworkError>) -> Void) {
+        guard let bearer = bearer else {
+            completion(.failure(.noAuth))
+            return
+        }
+        
+        let animalURL = baseUrl.appendingPathComponent("animals/\(animalName)")
+        
+        var request = URLRequest(url: animalURL)
+        request.httpMethod = HTTPMethod.get.rawValue
+        request.addValue("Bearer \(bearer.token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+            if let response = response as? HTTPURLResponse,
+                response.statusCode == 401 {
+                completion(.failure(.badAuth))
+                return
+            }
+            
+            guard error == nil else {
+                completion(.failure(.otherError(error!)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(.noData))
+                return
+            }
+            
+            let jsonDecoder = JSONDecoder()
+            do {
+                let animal = try jsonDecoder.decode(Animal.self, from: data)
+                completion(.success(animal))
+            } catch {
+                completion(.failure(.decodeFailure))
+            }
+        }.resume()
+    }
+    
+    func fetchImage(at urlString: String, completion: @escaping (Result<UIImage, NetworkError>) -> Void) {
+        let imageURL = URL(string: urlString)!
+        var request = URLRequest(url: imageURL)
+        request.httpMethod = HTTPMethod.get.rawValue
+        
+        URLSession.shared.dataTask(with: request) { (data, _, error) in
+            guard error == nil else {
+                completion(.failure(.otherError(error!)))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(.noData))
+                return
+            }
+            
+            let image = UIImage(data: data)!
+            completion(.success(image))
+        }.resume()
+    }
 }
